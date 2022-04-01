@@ -1,14 +1,14 @@
 # AURTHO methodology
 ----------------------------------------------
 
-## 1. Download of latest _Streptomyces_ genomes
+## 1. Download of latest genomes of the taxon of interest
 
 ```
-cd ~/Documents/bioinfo/strepto-assembly
+cd ~/path/to/genome_files
 
-../shell_scripts/download_new_streptos.sh
+./download_new_genomes.sh
 ```
-This script will look inside the strepto-assembly directory, and only download genomes with GCF ids that are not yet present inside this directory. 
+If genomes have already been downoaded and are present in the directory, the script will only download genomes with GCF ids that are not yet present. If no genomes are present, it will download all the ones corresponding to the input criteria. 
 It will create a new directory named `strepto_genomes_$date`, as well as 2 files: `assembly_summ_$date` and `ftpdirpaths_$date` (containing the links used to download the genomes).  
 Here is the [link](#download_new_streptos) to the script that is used for the download. 
   
@@ -162,7 +162,7 @@ Use it in a `for` loop to run it on all COGs that you want to analyse.
 # SCRIPTS
 -----------
 
-##<a name="download_new_streptos"></a> Download new _Streptomyces_ genomes script
+##<a name="download_new_genomes"></a> Download new genomes script
 
 ```
 date=`date +"%m%d%y"`
@@ -171,9 +171,25 @@ echo "	##### Downloading latest assembly_summary.txt from NCBI FTP server as ass
 
 rsync --copy-links --times --verbose rsync://ftp.ncbi.nlm.nih.gov/genomes/refseq/bacteria/assembly_summary.txt ./assembly_summ_"$date".txt
 
-awk -F "\t" '$8 ~ /Streptomyces/ && $12=="Complete Genome" && $11=="latest"{print $20}' assembly_summ_"$date".txt > ftpdirpaths_$date
+regex_organism=$1
+
+awk -F "\t" '$12=="Complete Genome" && $11=="latest"{print}' ./assembly_summ_"$date".txt | grep $regex_organism | awk -F "\t" '{print $20}' > ftpdirpaths_$date
 
 for dir in `cat ftpdirpaths_$date`
+	do outdir=`echo $dir | rev | cut -d"/" -f1 | rev`
+	if [ ! -d ./"$outdir" ] 
+	then
+		ftp=`echo $dir | cut -d"/" -f3-100`
+		assembly=`echo $outdir | cut -d"_" -f1-2`
+		organism=`awk -F "\t" '$1=="'$assembly'"{print $8,$9,$10}' assembly_summ_"$date".txt`
+		echo "#### Downloading assembly $assembly ($organism) to ./outdir"
+		rsync --copy-links --times --verbose -r --keep-dirlinks rsync://$ftp ./strepto_genomes_"$date"/
+	fi
+done
+
+for dir in `cat ftpdirpaths_$date`; do outdir=`echo $dir | rev | cut -d"/" -f1 | rev`; ftp=`echo $dir | cut -d"/" -f3-100`; assembly=`echo $outdir | cut -d"_" -f1-2`; ; done
+
+ftp=`echo $dir | cut -d"/" -f3-100`; assembly=`echo $outdir | cut -d"_" -f1-2`; 
 	do outdir=`echo $dir | rev | cut -d"/" -f1 | rev`
 	if [ ! -d ./"$outdir" ] 
 	then
