@@ -28,9 +28,15 @@ The **i** should be set to 0 (if it is the first time we download genomes), or t
 I recently have had to change the printf statement to an echo, in order to get each line on a newline. The "\t" is replaced by "<ctrl v+i>" in the command line.
 
 ```
-rm −f assembly.infoi=0
+rm −f assembly.info
+i=0
 
-for dir in `ls -d GCF_* | cut -d"/" -f1`;	do organism=`awk -F "\t" '$1=="'$(echo $dir | cut -d"_" -f1-2)'"{print $8,$9,$10}' ../assembly_summ_030718.txt`	locus_tag=`egrep -o -m1 "locus_tag=\"\w+" $dir/*_genomic.gbff | cut -d"\"" -f2 | cut -d"_" -f1`	old_locus_tag=`egrep -o -m1 "old_locus_tag=\"\w+" $dir/*_genomic.gbff |cut -d"\"" -f2 | cut -d"_" -f1`	printf $i"\t"$dir"\t"$organism"\t"$locus_tag"\t"$old_locus_tag >> assembly.info	i=$(($i+1)) 
+for dir in `ls -d GCF_* | cut -d"/" -f1`;
+	do organism=`awk -F "\t" '$1=="'$(echo $dir | cut -d"_" -f1-2)'"{print $8,$9,$10}' ../assembly_summ_030718.txt`
+	locus_tag=`egrep -o -m1 "locus_tag=\"\w+" $dir/*_genomic.gbff | cut -d"\"" -f2 | cut -d"_" -f1`
+	old_locus_tag=`egrep -o -m1 "old_locus_tag=\"\w+" $dir/*_genomic.gbff |cut -d"\"" -f2 | cut -d"_" -f1`
+	printf $i"\t"$dir"\t"$organism"\t"$locus_tag"\t"$old_locus_tag >> assembly.info
+	i=$(($i+1)) 
 done
 ```  
 ### Reordering the sequences in \*protein.faa according to the order of the sequences in \*cds\_from\_genomic.fna
@@ -192,18 +198,19 @@ use Tie::IxHash;
 use List::AllUtils qw(uniq);
 use Storable;
 
-my $begin = time; 
-
-# Open directory and get all the files in it (perl has no 'argument list too long' error)
-opendir(DIR, "/Users/sinaeda/Documents/bioinfo/ProteinOrtho/COG90/");
-my @infiles = grep(/OG-.*\.fasta/, readdir(DIR));
-closedir(DIR);
-
+my $begin = time;
 
 # Create tf_ids, which opens and then closes the dat file for the TF
 # Only once
+my $indir = shift; # directory with the COG.fasta files
 my $dat = shift;
 my $outfile = shift;
+
+# Open directory and get all the files in it (perl has no 'argument list too long' error)
+opendir(DIR, $indir);
+my @infiles = grep(/OG-.*\.fasta/, readdir(DIR));
+closedir(DIR);
+
 open my $dh, '<', $dat;
 my @tf_ids;
 while (my $l = <$dh>) {
@@ -216,16 +223,16 @@ close $dh;
 # Create hash for COGs and their corresponding gene IDs
 tie my %ids_for, 'Tie::IxHash';
 
-if (! -e '/Users/sinaeda/Documents/bioinfo/ProteinOrtho/COG90/COG_hash.ref') {
+if (! -e join($indir, 'COG_hash.ref')) {
 	for my $infile (@infiles) {
 		## $infile
 		%ids_for = (%ids_for, read_COG_fasta($infile));
 	}
 	## %ids_for
-	store \%ids_for, '/Users/sinaeda/Documents/bioinfo/ProteinOrtho/COG90/COG_hash.ref';
+	store \%ids_for, join($indir, 'COG_hash.ref');
 }
 
-my $id_ref = retrieve('/Users/sinaeda/Documents/bioinfo/ProteinOrtho/COG90/COG_hash.ref');
+my $id_ref = retrieve(join($indir, 'COG_hash.ref'));
 %ids_for = %$id_ref;
 ## %ids_for
 
