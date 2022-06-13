@@ -1,0 +1,8 @@
+for file in [% species %]_[% basename %].fasta
+	do meme $file -oc [% species %]_meme/[% basename %]_anr_long -dna -mod anr -maxw 30 -nmotifs 4 -revcomp
+	meme $file -oc [% species %]_meme/[% basename %]_zoops_long -dna -mod zoops -maxw 30 -nmotifs 4 -revcomp
+	meme $file -oc [% species %]_meme/[% basename %]_anr_medium -dna -mod anr -maxw 20 -nmotifs 4 -revcomp
+	meme $file -oc [% species %]_meme/[% basename %]_zoops_medium -dna -mod zoops -maxw 20 -nmotifs 4 -revcomp
+	meme $file -oc [% species %]_meme/[% basename %]_anr_short -dna -mod anr -maxw 10 -nmotifs 4 -revcomp
+	meme $file -oc [% species %]_meme/[% basename %]_zoops_short -dna -mod zoops -maxw 10 -nmotifs 4 -revcomp
+done
