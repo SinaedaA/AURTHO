@@ -6,53 +6,21 @@
 ```
 cd ~/path/to/genome_files
 
-./download_new_genomes.sh
+python3 1_download_genomes.py --outdir genomes --genus Streptomyces --level-of-assembly "Complete Genome" --database refseq --repository bacteria
 ```
 If genomes have already been downoaded and are present in the directory, the script will only download genomes with GCF ids that are not yet present. If no genomes are present, it will download all the ones corresponding to the input criteria. 
-It will create a new directory named `strepto_genomes_$date`, as well as 2 files: `assembly_summ_$date` and `ftpdirpaths_$date` (containing the links used to download the genomes).  
-Here is the [link](#download_new_streptos) to the script that is used for the download. 
-  
-### Unzip the files of interest
-```
-cd strepto_genomes_$date
-gunzip */*protein.faa.gz
-gunzip */*cds_from_genomic.fna.gz
-gunzip */*_genomic.gbff.gz
-```
-The files that are most interesting for the orthogroup creation are the annotated protein products (.faa), the CDSs (.cds\_from\_genomic.fna), and the GenBank flat file annotated genome sequence (.gbff, what we see on NCBI).  
+It will create a new directory named `genomes`, as well as 2 files: `assembly_summary_$date` and `ftpdirpaths_$date` (containing the links used to download the genomes). It will also create the `assembly.info` file, which will be used a lot for future reference.
+Here is the [link](#1_download_genomes.py) to the script that is used for the download. 
 
-### Creating the assembly.info file
-This file contains all the information on each strain, including the locus\_tag, the old\_locus\_tag, the index that we gave the strain (which is given according to the order in which it appears inside the directory).  
-The **i** should be set to 0 (if it is the first time we download genomes), or to _the number of strains last downloaded_.  
-
-I recently have had to change the printf statement to an echo, in order to get each line on a newline. The "\t" is replaced by "<ctrl v+i>" in the command line.
-
-```
-rm −f assembly.info
-i=0
-
-for dir in `ls -d GCF_* | cut -d"/" -f1`;
-	do organism=`awk -F "\t" '$1=="'$(echo $dir | cut -d"_" -f1-2)'"{print $8,$9,$10}' ../assembly_summ_030718.txt`
-	locus_tag=`egrep -o -m1 "locus_tag=\"\w+" $dir/*_genomic.gbff | cut -d"\"" -f2 | cut -d"_" -f1`
-	old_locus_tag=`egrep -o -m1 "old_locus_tag=\"\w+" $dir/*_genomic.gbff |cut -d"\"" -f2 | cut -d"_" -f1`
-	printf $i"\t"$dir"\t"$organism"\t"$locus_tag"\t"$old_locus_tag >> assembly.info
-	i=$(($i+1)) 
-done
-```  
 ### Reordering the sequences in \*protein.faa according to the order of the sequences in \*cds\_from\_genomic.fna
-```
-IFS=$'\n'
-for strain in `cat assembly.info`
- do i=`echo $strain | awk '{print $1}'`
- dir=`echo $strain | awk '{print $2}'`
- perl rename_fasta.perl $i $dir/"$dir"_protein.faa $dir/"$dir"_cds_from_genomic.fna $dir/"$dir"_genomic.gbff $dir/$i.cds.faa
- perl getGFF.pl $i $dir
- ln -s $PWD/$dir/$i.cds.faa ~/Documents/bioinfo/proteinortho/$i.cds.faa
- ln -s $PWD/$dir/$i.cds.gff ~/Documents/bioinfo/proteinortho/$i.cds.gff
-done
+Using the script `2_make_cds_faa_gff.py`, we will create a file containing the protein sequences (in the order of the corresponding CDSs on the genome), also containing the header information from `cds_from_genomic.fna` which is more informative than the header found in `protein.faa`.
+Additionally, it will create a subset of the gff file, containing only CDS features.
 
-unset IFS
+```bash
+TIMESTAMP=$(date '+%Y%m%d-%H%M%S')
+python3 scripts/2_make_cds_faa_gff.py --genome_dir ~/FungalTF/genomes --infofile ~/FungalTF/genomes/assembly.info --logfile 2_make_cds_faa_gff_${TIMESTAMP}.log
 ```
+
 ### ProteinOrtho
 
 ```
